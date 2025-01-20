@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Chat Application</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7fa;
+      background-image:  url(background\ image\ 2.jpg) ;
+    }
+
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 10px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      background-image:  url(beautiful.jpg) ;
+    }
+
+    .messages {
+      overflow-y: auto;
+      max-height: 300px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+
+    .message {
+      margin: 5px 0;
+      padding: 8px;
+      background-color: #3498db;
+      color: white;
+      border-radius: 5px;
+      max-width: 80%;
+    }
+
+    .user-message {
+      background-color: #16a085;
+      align-self: flex-end;
+    }
+
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 15%;
+      padding: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Real-Time Chat</h1>
+  </header>
+
+  <div class="chat-container">
+    <div class="messages" id="messages">
+      <!-- Messages will be displayed here -->
+    </div>
+
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <button id="sendButton">Send</button>
+  </div>
+
+  <script>
+    // WebSocket connection to the server
+    const socket = new WebSocket('ws://localhost:8080'); // Replace with your WebSocket server URL
+    
+    // DOM elements
+    const messagesContainer = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    
+    // Display incoming messages
+    socket.onmessage = function(event) {
+      const message = JSON.parse(event.data);
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      
+      // Check if the message is from the user or another person
+      if (message.user === 'me') {
+        messageElement.classList.add('user-message');
+      }
+
+      messageElement.textContent = message.text;
+      messagesContainer.appendChild(messageElement);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight; // Auto-scroll to the latest message
+    };
+
+    // Send message to the server when the button is clicked
+    sendButton.addEventListener('click', () => {
+      const messageText = messageInput.value.trim();
+      if (messageText) {
+        const message = {
+          user: 'me',
+          text: messageText
+        };
+        socket.send(JSON.stringify(message)); // Send message to server
+        messageInput.value = ''; // Clear input field
+      }
+    });
+
+    // Optionally, send message when pressing 'Enter' key
+    messageInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        sendButton.click();
+      }
+    });
+
+    // WebSocket server setup
+    if (window.location.protocol !== "https:") {
+      const wsServer = new WebSocket('ws://localhost:8080'); // Local WebSocket server
+
+      wsServer.onopen = function () {
+        console.log("WebSocket connection established.");
+      }
+
+      wsServer.onmessage = function (event) {
+        const message = event.data;
+        console.log('Message received from server:', message);
+        // Update chat interface with the received message
+      }
+    }
+  </script>
+
+  <script>
+    // WebSocket Server - Node.js with ws
+    const WebSocket = require('ws');
+    const wss = new WebSocket.Server({ port: 8080 });
+
+    wss.on('connection', (ws) => {
+      console.log('A new user connected.');
+
+      // Listen for messages from clients
+      ws.on('message', (message) => {
+        console.log('Received: ', message);
+
+        // Broadcast the message to all connected clients
+        wss.clients.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(message); // Send message to all clients except the sender
+          }
+        });
+      });
+
+      // Handle client disconnection
+      ws.on('close', () => {
+        console.log('A user disconnected.');
+      });
+    });
+
+    console.log('WebSocket server is running on ws://localhost:8080');
+  </script>
+
+</body>
+</html>
